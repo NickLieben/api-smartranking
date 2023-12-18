@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreatePlayerDto } from './dtos/create-player.dto';
 import { Player } from './interfaces/player.interface';
 import { InjectModel } from '@nestjs/mongoose';
@@ -12,65 +17,51 @@ export class PlayersService {
 
   private readonly logger = new Logger(PlayersService.name);
 
-  async createOrUpdatePlayer(createPlayerDto: CreatePlayerDto): Promise<void> {
+  async createPlayer(createPlayerDto: CreatePlayerDto): Promise<Player> {
     const { email } = createPlayerDto;
 
     const hasPlayer = await this.playerModule.findOne({ email }).exec();
 
     if (hasPlayer) {
-      this.update(createPlayerDto);
-    } else {
-      this.create(createPlayerDto);
+      throw new BadRequestException(`email: ${email} already exists.`);
     }
+
+    const player = new this.playerModule(createPlayerDto);
+
+    await player.save();
+
+    return await player;
+  }
+
+  async updatePlayer(
+    _id: string,
+    updatePlayerDto: CreatePlayerDto,
+  ): Promise<void> {
+    const hasPlayer = await this.playerModule.findOne({ _id }).exec();
+
+    if (!hasPlayer) throw new NotFoundException(`ID: ${_id} not found.`);
+
+    await this.playerModule
+      .findOneAndUpdate({ _id }, { $set: updatePlayerDto })
+      .exec();
   }
 
   async getAllPlayers(): Promise<Player[]> {
     return await this.playerModule.find().exec();
   }
 
-  async getPlayerByEmail(email: string): Promise<Player> {
-    const hasPlayer = await this.playerModule.findOne({ email }).exec();
+  async getPlayerById(_id: string): Promise<Player> {
+    const hasPlayer = await this.playerModule.findOne({ _id }).exec();
 
-    if (!hasPlayer) throw new NotFoundException(`Email: ${email} not found.`);
+    if (!hasPlayer) throw new NotFoundException(`ID: ${_id} not found.`);
 
     return hasPlayer;
   }
 
-  async deletePlayer(email: string): Promise<any> {
-    return await this.playerModule.findOneAndDelete({ email }).exec();
-  }
+  async deletePlayer(_id: string): Promise<any> {
+    const hasPlayer = await this.playerModule.findOne({ _id }).exec();
+    if (!hasPlayer) throw new NotFoundException(`ID: ${_id} not found.`);
 
-  private async create(createPlayerDto: CreatePlayerDto): Promise<Player> {
-    const player = new this.playerModule(createPlayerDto);
-
-    return await player.save();
-
-    // const { name, email, phoneNumber } = createPlayerDto;
-
-    // const player: Player = {
-    //   _id: uuidv4(),
-    //   name,
-    //   email,
-    //   phoneNumber,
-    //   ranking: 'A',
-    //   positionRanking: 1,
-    //   urlImage:
-    //     'https://movinggirls.com.br/blog/wp-content/uploads/2020/06/mulher-fot%C3%B3grafa.jpg',
-    // };
-
-    // this.logger.log(`createPlayerDto: ${JSON.stringify(player)}`);
-    // this.players.push(player);
-  }
-
-  private async update(updatePlayerDto: CreatePlayerDto): Promise<Player> {
-    return await this.playerModule
-      .findOneAndUpdate(
-        { email: updatePlayerDto.email },
-        { $set: updatePlayerDto },
-      )
-      .exec();
-
-    // const { name } = updatePlayerDto;
-    // hasPlayer.name = name;
+    return await this.playerModule.findOneAndDelete({ _id }).exec();
   }
 }

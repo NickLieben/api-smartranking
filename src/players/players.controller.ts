@@ -3,8 +3,9 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   Post,
-  Query,
+  Put,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -19,23 +20,37 @@ export class PlayersController {
 
   @Post()
   @UsePipes(ValidationPipe)
-  async createOrUpdatePlayer(@Body() createPlayerDto: CreatePlayerDto) {
-    await this.playersService.createOrUpdatePlayer(createPlayerDto);
+  async createPlayer(
+    @Body() createPlayerDto: CreatePlayerDto,
+  ): Promise<Player> {
+    return await this.playersService.createPlayer(createPlayerDto);
+  }
+
+  @Put('/:_id')
+  @UsePipes(ValidationPipe)
+  async updatePlayer(
+    @Body() updatePlayerDto: CreatePlayerDto,
+    @Param('_id', PlayersValidationParametersPipe) _id: string,
+  ): Promise<void> {
+    await this.playersService.updatePlayer(_id, updatePlayerDto);
   }
 
   @Get()
-  async getPlayers(
-    @Query('email', PlayersValidationParametersPipe) email: string,
-  ): Promise<Player[] | Player> {
-    if (email) return await this.playersService.getPlayerByEmail(email);
-
+  async getAllPlayers(): Promise<Player[]> {
     return await this.playersService.getAllPlayers();
   }
 
-  @Delete()
+  @Get('/:_id')
+  async getPlayerById(
+    @Param('_id', PlayersValidationParametersPipe) _id: string,
+  ): Promise<Player> {
+    return await this.playersService.getPlayerById(_id);
+  }
+
+  @Delete('/_id')
   async deletePlayer(
-    @Query('email', PlayersValidationParametersPipe) email: string,
+    @Param('_id', PlayersValidationParametersPipe) _id: string,
   ): Promise<void> {
-    await this.playersService.deletePlayer(email);
+    await this.playersService.deletePlayer(_id);
   }
 }
